@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "description": "中医医案管理系统（Koa + React + Ant Design + Tailwind + CLI）",
+  "tags": [
+    "中医",
+    "医案",
+    "OCR",
+    "统计"
+  ],
+  "version": "1.0.0",
+  "kind": "app",
+  "ports": {
+    "web": 5174,
+    "dev": 3001
+  },
+  "protocol": {
+    "lifecycle": {
+      "start": [
+        "bun",
+        "run",
+        "scripts/start-all.ts"
+      ],
+      "healthEndpoint": "/api/health",
+      "healthIntervalMs": 30000
+    }
+  },
+  "sourceManifests": [
+    {
+      "relPath": "package.json",
+      "rawVersion": "1.0.0"
+    }
+  ],
+  "generatedAt": "2026-08-13T10:00:00.000Z",
+  "generatorVersion": "1.0.30-pi"
+}

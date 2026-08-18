@@ -1,0 +1,25 @@
+# ── 依赖 ──
+node_modules/
+
+# ── 密钥与环境变量 ──
+.env
+.env.*
+!.env.example
+*.local
+credentials.json
+
+# ── 运行时数据（数据库/上传/备份） ──
+server/db/*.db
+server/db/*.db-shm
+server/db/*.db-wal
+server/uploads/
+server/backups/
+
+# ── 构建产物 ──
+web/dist/
+dist/
+
+# ── 日志与临时 ──
+*.log
+.DS_Store
+Thumbs.db

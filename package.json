@@ -1,0 +1,17 @@
+{
+  "name": "clawdao-tcm-cases",
+  "version": "1.0.0",
+  "private": true,
+  "description": "中医医案管理系统 — 医案电子化与统计分析平台（Koa + React + Ant Design + Tailwind + SQLite + CLI）",
+  "workspaces": [
+    "server",
+    "web",
+    "cli"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace server",
+    "dev:web": "npm run dev --workspace web",
+    "db:init": "npm run db:init --workspace server",
+    "test": "npm test --workspace server"
+  }
+}

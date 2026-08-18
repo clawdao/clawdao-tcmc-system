@@ -1,0 +1,17 @@
+{
+  "name": "cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "中医医案管理系统命令行工具 tcm-case",
+  "type": "module",
+  "bin": {
+    "tcm-case": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "commander": "^13.1.0"
+  }
+}
