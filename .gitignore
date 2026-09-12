@@ -23,3 +23,9 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# ── ClawDao 运行时临时文件 ──
+.clawdao-uploads/
+.clawdao/.running.pids
+.clawdao/*.pid
+.clawdao/*.pids

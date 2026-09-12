@@ -7,7 +7,7 @@
     "OCR",
     "统计"
   ],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "app",
   "ports": {
     "web": 5174,

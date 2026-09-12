@@ -1,6 +1,6 @@
 {
   "name": "clawdao-tcmc-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "中医医案管理系统 — 医案电子化与统计分析平台（Koa + React + Ant Design + Tailwind + SQLite + CLI）",
   "workspaces": [

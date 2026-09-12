@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "中医医案管理系统后端（Koa + SQLite）",
   "main": "src/index.js",
