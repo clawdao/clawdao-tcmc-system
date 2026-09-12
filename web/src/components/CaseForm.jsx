@@ -5,16 +5,19 @@ import dayjs from 'dayjs';
 import client from '../api/client';
 import { FORM_STEPS, FIELD_GROUPS } from '../config/caseFields';
 
-function FieldInput({ field, dictOptions }) {
+// 关键：必须透传 AntD Form.Item 通过 cloneElement 注入的 props（value/onChange 等），
+// 否则 Form.Item 注入的 value 会被 React 当作给 FieldInput 自身的 props，
+// 内部返回的 <Input/> 永远拿不到 value，导致表单回填失败。
+function FieldInput({ field, dictOptions, ...rest }) {
   switch (field.type) {
     case 'textarea':
-      return <Input.TextArea rows={3} placeholder={`请输入${field.label}`} />;
+      return <Input.TextArea rows={3} placeholder={`请输入${field.label}`} {...rest} />;
     case 'number':
-      return <InputNumber min={field.min} max={field.max} className="w-full" placeholder={`请输入${field.label}`} />;
+      return <InputNumber min={field.min} max={field.max} className="w-full" placeholder={`请输入${field.label}`} {...rest} />;
     case 'date':
-      return <DatePicker className="w-full" format="YYYY-MM-DD" />;
+      return <DatePicker className="w-full" format="YYYY-MM-DD" {...rest} />;
     case 'select':
-      return <Select options={(field.options || []).map((o) => ({ value: o, label: o }))} placeholder={`请选择${field.label}`} allowClear />;
+      return <Select options={(field.options || []).map((o) => ({ value: o, label: o }))} placeholder={`请选择${field.label}`} allowClear {...rest} />;
     case 'dictSelect':
       return (
         <AutoComplete
@@ -22,32 +25,60 @@ function FieldInput({ field, dictOptions }) {
           placeholder={`请输入或选择${field.label}`}
           filterOption={(input, option) => option.value.includes(input)}
           allowClear
+          {...rest}
         />
       );
     default:
-      return <Input placeholder={`请输入${field.label}`} />;
+      return <Input placeholder={`请输入${field.label}`} {...rest} />;
   }
+}
+
+// 把后端对象转成 Form 需要的格式（visit_date 转 dayjs、补默认值）
+function toFormValues(raw) {
+  const values = { ...(raw || {}) };
+  if (values.visit_date) values.visit_date = dayjs(values.visit_date);
+  for (const group of Object.values(FIELD_GROUPS)) {
+    for (const f of group) {
+      if (values[f.name] === undefined && f.initial !== undefined) values[f.name] = f.initial;
+    }
+  }
+  return values;
 }
 
 // 医案表单（新建/编辑/OCR 校对共用）
 export default function CaseForm({ initialValues = {}, initialItems = [], onSubmit, submitting, imageIds = [] }) {
   const [form] = Form.useForm();
   const [step, setStep] = useState(0);
-  const [items, setItems] = useState(initialItems.length ? initialItems : [{ herb_name: '', dosage: '', note: '' }]);
+  // 函数式 useState 初始化：避免父组件异步传值场景下，初值只计算一次的问题
+  const [items, setItems] = useState(() => (initialItems && initialItems.length ? initialItems : [{ herb_name: '', dosage: '', note: '' }]));
   const [dictOptions, setDictOptions] = useState({ disease: [], herb: [], syndrome: [], formula: [] });
   const [templates, setTemplates] = useState([]);
   const [tplOpen, setTplOpen] = useState(false);
+  const [ready, setReady] = useState(false);
 
+  // 用关键字段生成 initialKey，作为 effect 依赖，确保父组件异步加载完成后能正确触发 setFieldsValue
+  const initialKey = React.useMemo(() => JSON.stringify({
+    no: initialValues.case_no,
+    patient: initialValues.patient_name,
+    visit_date: initialValues.visit_date,
+    diagnosis: initialValues.tcm_diagnosis,
+    items: (initialItems || []).map((i) => `${i.herb_name}|${i.dosage}|${i.note}`).join(','),
+  }), [initialValues, initialItems]);
+
+  useEffect(() => { setReady(true); }, []);
+
+  // 父组件数据 ready 且 initialKey 变化时，把数据写回表单
   useEffect(() => {
-    const values = { ...initialValues };
-    if (values.visit_date) values.visit_date = dayjs(values.visit_date);
-    for (const group of Object.values(FIELD_GROUPS)) {
-      for (const f of group) {
-        if (values[f.name] === undefined && f.initial !== undefined) values[f.name] = f.initial;
-      }
-    }
-    form.setFieldsValue(values);
-  }, [initialValues]);
+    if (!ready) return;
+    const values = toFormValues(initialValues);
+    // 用 setTimeout 把 setFieldsValue 推到下一个宏任务，等 React 把所有 Form.Item 完成首次渲染
+    const t = setTimeout(() => {
+      form.setFieldsValue(values);
+      setItems(prev => (Array.isArray(initialItems) && initialItems.length ? initialItems.map((it) => ({ ...it })) : prev));
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, initialKey]);
 
   useEffect(() => {
     for (const type of ['disease', 'herb', 'syndrome', 'formula']) {

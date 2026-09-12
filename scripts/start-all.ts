@@ -15,6 +15,61 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
+// ── 工具链路径探测（ClawDao 平台 PATH 不含 node/npm/bun，需要手动找） ──
+
+function resolveTool(tool: string, candidates: string[]): string | null {
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+function findNode(): string {
+  const home = Bun.env.HOME ?? '';
+  const nodePaths = [
+    `${home}/.nvm/versions/node/v22.22.0/bin/node`,
+    `${home}/.nvm/versions/node/v22.0.0/bin/node`,
+    `${home}/.nvm/versions/node/v24.0.0/bin/node`,
+    `${home}/.bun/bin/node`,
+    '/opt/homebrew/bin/node',
+    '/usr/local/bin/node',
+  ];
+  const found = resolveTool('node', nodePaths);
+  if (found) return found;
+  console.error('[start-all] \u274c 找不到 node，请确保已安装 Node.js 18+');
+  process.exit(1);
+}
+
+function findNpm(): string {
+  const home = Bun.env.HOME ?? '';
+  const npmPaths = [
+    `${home}/.nvm/versions/node/v22.22.0/bin/npm`,
+    `${home}/.nvm/versions/node/v22.0.0/bin/npm`,
+    `${home}/.nvm/versions/node/v24.0.0/bin/npm`,
+    `${home}/.bun/bin/npm`,
+    '/opt/homebrew/bin/npm',
+    '/usr/local/bin/npm',
+  ];
+  const found = resolveTool('npm', npmPaths);
+  if (found) return found;
+  console.error('[start-all] \u274c 找不到 npm');
+  process.exit(1);
+}
+
+const NODE_BIN = findNode();
+const NPM_BIN = findNpm();
+const NODE_DIR = resolve(NODE_BIN, '..');
+const NPM_DIR = resolve(NPM_BIN, '..');
+
+// 注入到 PATH，让子进程能找到 node/npm/npx
+const basePath = Bun.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin';
+Bun.env.PATH = `${NODE_DIR}:${NPM_DIR}:${basePath}`;
+
+console.log(`[start-all] Node: ${NODE_BIN}`);
+console.log(`[start-all] NPM:  ${NPM_BIN}`);
+
+
+
 // ── 项目配置读取 ──
 
 interface ProjectConfig {
@@ -165,7 +220,7 @@ const serverEntry = ['server/src/index.js', 'src/index.js', 'index.js'].find((f)
   existsSync(resolve(cwd, f)),
 );
 if (serverEntry) {
-  await startService('Backend', ['node', serverEntry], {
+  await startService('Backend', [NODE_BIN, serverEntry], {
     url: `http://127.0.0.1:${apiPort}`,
     env: { PORT: String(apiPort) }, // 显式注入后端端口，屏蔽外部 PORT 干扰
   });
@@ -177,7 +232,7 @@ if (serverEntry) {
 
 const webDir = resolve(cwd, 'web');
 if (existsSync(resolve(webDir, 'package.json'))) {
-  await startService('Frontend', ['npx', 'vite', '--host', '--port', String(webPort)], {
+  await startService('Frontend', [NPM_BIN, 'exec', '--', 'vite', '--host', '--port', String(webPort)], {
     url: `http://localhost:${webPort}`,
     delay: 1200,
     cwd: webDir,

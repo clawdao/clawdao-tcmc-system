@@ -7,21 +7,29 @@ import CaseForm from '../components/CaseForm';
 export default function CaseEdit() {
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const [initial, setInitial] = useState(null);
-  const [items, setItems] = useState([]);
+  // 单个 state 同时承载 initialValues 和 items，避免两次 setState 的渲染空窗期
+  const [data, setData] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isEdit) {
-      client.get(`/cases/${id}`).then((r) => {
-        setInitial(r.data);
-        setItems(r.data.items || []);
-      }).catch((e) => message.error(e.message));
-    } else {
-      setInitial({});
+    if (!isEdit) {
+      setData({ initialValues: {}, items: [] });
+      return;
     }
-  }, [id]);
+    let cancelled = false;
+    setData(null);
+    client.get(`/cases/${id}`).then((r) => {
+      // r 已经是后端响应体的 data 字段（即 row 对象）；axios 拦截器已剥外层
+      const row = r && r.data !== undefined ? r.data : r;
+      if (cancelled) return;
+      setData({ initialValues: row || {}, items: row?.items || [] });
+    }).catch((e) => {
+      if (cancelled) return;
+      message.error(e.message || '医案加载失败');
+    });
+    return () => { cancelled = true; };
+  }, [id, isEdit]);
 
   const handleSubmit = async (payload) => {
     setSubmitting(true);
@@ -38,11 +46,18 @@ export default function CaseEdit() {
     }
   };
 
-  if (!initial) return <div className="flex justify-center py-20"><Spin size="large" /></div>;
+  if (!data) return <div className="flex justify-center py-20"><Spin size="large" /></div>;
+
+  const title = isEdit ? `编辑医案 ${data.initialValues.case_no || ''}` : '新建医案';
 
   return (
-    <Card title={isEdit ? `编辑医案 ${initial.case_no || ''}` : '新建医案'}>
-      <CaseForm initialValues={initial} initialItems={items} onSubmit={handleSubmit} submitting={submitting} />
+    <Card title={title}>
+      <CaseForm
+        initialValues={data.initialValues}
+        initialItems={data.items}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+      />
     </Card>
   );
 }

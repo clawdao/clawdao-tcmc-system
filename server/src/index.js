@@ -8,8 +8,19 @@ const backupService = require('./services/backupService');
 migrate();
 
 const app = createApp();
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`中医医案管理系统后端已启动：http://localhost:${config.port}`);
+});
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`[启动失败] 端口 ${config.port} 已被占用。`);
+    console.error(`  → 排查：lsof -i :${config.port}`);
+    console.error(`  → 或修改 PORT 环境变量 / .clawdao/project.json 的 ports.dev`);
+    process.exit(1);
+  }
+  console.error('[启动失败] Server error:', err);
+  process.exit(1);
 });
 
 // 定时备份任务
